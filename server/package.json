@@ -9,9 +9,11 @@
         "postinstall": "nuxt prepare"
     },
     "dependencies": {
-        "nuxt": "^3.14.0",
         "better-sqlite3": "^9.4.0",
-        "h3": "^1.11.1"
+        "date-fns": "^4.1.0",
+        "h3": "^1.11.1",
+        "nanoid": "^5.0.8",
+        "nuxt": "^3.14.0"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^7.6.9",

@@ -27,4 +27,10 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: "2024-11-10",
+
+  hooks: {
+    "nitro:init": () => {
+      console.log("🚀 Server initialized");
+    },
+  },
 });
