@@ -18,6 +18,11 @@ export default defineConfig({
         tailwindcss,
         autoprefixer
       ]
+    },
+    preprocessorOptions: {
+      scss: {
+        api: "modern-compiler" // or 'modern'
+      }
     }
   },
   build: {
