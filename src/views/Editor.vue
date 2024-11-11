@@ -133,23 +133,29 @@ const router = useRouter()
 const codeStore = useCodeStore()
 const dropdown = ref(null)
 
+// 基本状态
 const code = ref('')
 const language = ref('javascript')
+const title = ref('')
+const currentSnippetId = ref(null)
+
+// 界面状态
 const isDropdownOpen = ref(false)
 const showShareSettings = ref(false)
-const expireTime = ref('7d')
 const isLoading = ref(false)
+const accessCode = ref('')
+const expireTime = ref('7d')
 
-// 添加标题状态
-const title = ref('')
+// 保存状态追踪 - 添加这些缺失的变量
+const lastSavedCode = ref('')
+const lastSavedLanguage = ref('')
+const lastSavedTitle = ref('')
+const snippetSerial = ref('')
 
-const { languages: storeLanguages } = storeToRefs(codeStore)
-
-// 添加编辑器引用
+// 编辑器引用
 const editorRef = ref(null)
 
-// 添加当前代码片段ID的状态
-const currentSnippetId = ref(null)
+const { languages: storeLanguages } = storeToRefs(codeStore)
 
 // 添加格式化方法
 const formatCode = () => {
@@ -158,8 +164,6 @@ const formatCode = () => {
 
 // 获取当前语言名称
 const getCurrentLanguageName = () => {
-    console.log('Current language:', language.value)
-    console.log('Store languages:', storeLanguages.value)
     if (!language.value) return '选择语言'
     if (!storeLanguages.value) return language.value
 
@@ -189,23 +193,43 @@ const saveCode = () => withLoading(async () => {
     try {
         if (!code.value?.trim()) {
             showToast('代码内容不能为空', 'error')
-            return
+            return null
         }
 
-        // 直接传递正确的参数结构
+        // 检查是否需要保存
+        const needsSave = !currentSnippetId.value || // 从未保存过
+            code.value !== lastSavedCode.value || // 代码内容变更
+            language.value !== lastSavedLanguage.value || // 语言变更
+            title.value !== lastSavedTitle.value // 标题变更
+
+        if (!needsSave) {
+            // 如果代码没有变化，返回当前的状态
+            return {
+                id: currentSnippetId.value,
+                data: snippetSerial.value
+            }
+        }
+
+        // 保存代码，传递序列号
         const result = await codeStore.createSnippet({
             id: currentSnippetId.value,
-            code: code.value,         // 直接传递代码字符串
-            language: language.value,  // 直接传递语言标识符
-            title: title.value        // 直接传递标题
+            code: code.value,
+            language: language.value,
+            title: title.value,
+            serial: snippetSerial.value
         })
 
-        // 保存返回的ID
+        // 更新保存状态
         currentSnippetId.value = result.id
+        snippetSerial.value = result.data
+        lastSavedCode.value = code.value
+        lastSavedLanguage.value = language.value
+        lastSavedTitle.value = title.value
+
         showToast('代码保存成功')
         return result
     } catch (error) {
-        showToast(error.message, 'error')
+        showToast(error.message || '保存失败', 'error')
         throw error
     }
 })
@@ -223,17 +247,18 @@ const shareCode = () => withLoading(async () => {
             return
         }
 
-        // 如果没有保存过或代码有更新，先保存
-        const needsSave = !currentSnippetId.value ||
-            code.value !== (await codeStore.getSnippet(currentSnippetId.value))?.code
+        // 先执行保存操作
+        const saveResult = await saveCode()
 
-        if (needsSave) {
-            await saveCode()
+        // 如果保存失败或没有返回 id，则终止分享
+        if (!saveResult?.id) {
+            showToast('保存代码失败，无法生成分享链接', 'error')
+            return
         }
 
         // 创建分享链接
         const result = await codeStore.shareCode({
-            snippetId: currentSnippetId.value,
+            snippetId: saveResult.id, // 使用刚保存的代码的 id
             accessCode: accessCode.value,
             expireTime: expireTime.value
         })
@@ -250,7 +275,7 @@ const shareCode = () => withLoading(async () => {
         // 重置提取码
         accessCode.value = ''
     } catch (error) {
-        showToast(error.message, 'error')
+        showToast(error.message || '分享失败', 'error')
     }
 })
 

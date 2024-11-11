@@ -22,12 +22,12 @@ export const useCodeStore = defineStore('code', {
             }
         },
 
-        async createSnippet({ id, code, language, title }) {
-            console.log('------------')
+        async createSnippet({ id, code, language, title, serial }) {
             try {
                 const data = {
                     code,
                     language,
+                    serial,
                     ...(title ? { title } : {})
                 }
 
@@ -40,7 +40,11 @@ export const useCodeStore = defineStore('code', {
                     result = await codeService.createSnippet(data)
                 }
 
-                return result
+                // 确保返回正确的结构
+                return {
+                    id: id || result.id,
+                    data: result.data
+                }
             } catch (error) {
                 console.error('保存代码片段失败:', error)
                 throw error
