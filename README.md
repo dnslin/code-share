@@ -1,101 +1,83 @@
-# Code Share
 
-一个现代化的代码分享平台，支持多种编程语言和访问控制。
+## 🎯 开发计划
 
-## 项目结构
+- [x] 基础编辑器功能
+- [x] 代码格式化
+- [x] 主题切换
+- [x] 代码分享
+- [x] 密码保护
+- [ ] 代码片段管理
+- [ ] 用户系统
+- [ ] 代码历史记录
+- [ ] 协同编辑
+- [ ] 更多语言支持
 
-```bash
-code-share/
-├── frontend/ # Vue 3 前端项目
-│ ├── src/
-│ │ ├── components/ # 组件
-│ │ │ └── Editor/ # 编辑器组件
-│ │ ├── views/ # 页面
-│ │ ├── stores/ # Pinia 状态管理
-│ │ ├── config/ # 配置文件
-│ │ └── utils/ # 工具函数
-│ ├── public/ # 静态资源
-│ └── README.md # 前端文档
-└── server/ # Nuxt.js 后端项目
-├── server/ # 服务端代码
-├── middleware/ # 中间件
-└── README.md # 后端文档
-```
+## 🤝 贡献指南
 
-## 功能特点
+### Issue 规范
 
-- 代码编辑与分享
-  - 支持多种编程语言的代码高亮
-  - 实时代码编辑
-  - 可选的访问密码保护
-  - 代码分享链接生成
-  
-- 用户体验
-  - 响应式设计
-  - 暗色/亮色主题切换
-  - 快捷键支持
-  
-- 系统特性
-  - 完整的日志记录
-  - API 文档
-  - 健康检查
-  - 跨域支持
+1. 使用清晰且描述性的标题
+2. 提供详细的问题描述或建议
+3. 如果是 bug，请提供：
+   - 复现步骤
+   - 期望行为
+   - 实际行为
+   - 环境信息
 
-## 技术栈
+### PR 规范
 
+1. PR 标题格式：`type: description`
+   - type: feat/fix/docs/style/refactor/test/chore
+2. 提供清晰的 PR 描述
+3. 确保代码通过 lint 和 test
+4. 遵循项目的代码风格
+5. 适当添加注释和文档
 
-### 前端
+## 📝 开发过程
 
-- Vue 3 - 渐进式 JavaScript 框架
-- Pinia - 状态管理
-- Vue Router - 路由管理
-- TailwindCSS - 样式框架
-- Axios - HTTP 客户端
-- Monaco Editor - 代码编辑器
+1. **初始化项目**
+   - 使用 Vite 创建 Vue 3 项目
+   - 配置 Tailwind CSS
+   - 设置项目结构
 
+2. **核心功能开发**
+   - 集成 Monaco Editor
+   - 实现代码格式化
+   - 添加主题切换
+   - 开发分享功能
 
-### 后端
+3. **UI/UX 优化**
+   - 响应式设计
+   - 动画效果
+   - 交互优化
+   - 暗色主题支持
 
-- Nuxt.js 3 - SSR 框架
-- SQLite3 - 数据库
-- TypeScript - 类型支持
-- H3 - HTTP 引擎
+4. **功能完善**
+   - 快捷键支持
+   - 密码保护
+   - 提示消息
+   - 加载动画
 
+## 📄 许可证
 
+[MIT License](LICENSE)
 
-## 快速开始
+## 🙏 鸣谢
 
-1. 克隆项目
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/)
+- [Vue.js](https://vuejs.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Prettier](https://prettier.io/)
 
-```bash
-git clone https://github.com/dnslin/code-share.git
-cd code-share
-```
+## 🤝 贡献者
 
-2. 启动后端服务
+感谢所有为项目做出贡献的开发者！
 
-```bash
-cd server
-pnpm install
-pnpm dev
+## 📞 联系方式
 
-```
+- Issue: [GitHub Issues](https://github.com/dnslin/code-share/issues)
+- Email: i@dnsl.in
 
-3. 启动前端服务
+---
 
-```bash
-cd frontend
-pnpm install
-pnpm dev
-```
-
-
-## 环境要求
-
-- Node.js >= 16
-- PNPM >= 8
-- SQLite3
-
-## 许可证
-
-MIT License
+如果这个项目对你有帮助，欢迎 star ⭐️
