@@ -16,4 +16,4 @@ app.mount('#app')
 
 // 初始化主题
 const themeStore = useThemeStore(pinia)
-themeStore.init()
+themeStore.initTheme()

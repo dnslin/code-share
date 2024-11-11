@@ -10,7 +10,7 @@ import * as monaco from 'monaco-editor'
 import { useThemeStore } from '../stores/theme'
 
 const props = defineProps({
-    code: {
+    modelValue: {
         type: String,
         default: ''
     },
@@ -36,20 +36,41 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['update:code'])
+const emit = defineEmits(['update:modelValue', 'change'])
 const editorContainer = ref(null)
 let editor = null
 
 const themeStore = useThemeStore()
 
+// 修改格式化代码方法
+const formatCode = async () => {
+    if (!editor) return
+    try {
+        // 直接执行格式化动作
+        const formatAction = editor.getAction('editor.action.formatDocument')
+        if (formatAction) {
+            await formatAction.run()
+        } else {
+            console.warn('Format action not available')
+        }
+    } catch (error) {
+        console.error('Format error:', error)
+    }
+}
+
 onMounted(() => {
     editor = monaco.editor.create(editorContainer.value, {
-        value: props.code,
+        value: props.modelValue,
         language: props.language,
         theme: themeStore.isDark ? 'vs-dark' : 'vs-light',
         automaticLayout: true,
         minimap: {
-            enabled: false
+            enabled: true,
+            scale: 1,
+            side: 'right',
+            size: 'fit',
+            showSlider: 'mouseover',
+            renderCharacters: false
         },
         readOnly: props.readonly,
         scrollBeyondLastLine: false,
@@ -68,19 +89,34 @@ onMounted(() => {
         autoClosingBrackets: 'always',
         autoClosingQuotes: 'always',
         formatOnPaste: true,
-        formatOnType: true
+        formatOnType: true,
+        bracketPairColorization: true,
+        guides: {
+            bracketPairs: true,
+            indentation: true
+        }
     })
 
     editor.onDidChangeModelContent(() => {
         if (!props.readonly) {
-            emit('update:code', editor.getValue())
+            const value = editor.getValue()
+            emit('update:modelValue', value)
+            emit('change', value)
         }
     })
+
+    // 添加快捷键绑定
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        formatCode()
+    })
+
+    // 初始格式化
+    formatCode()
 })
 
-watch(() => props.code, (newCode) => {
-    if (editor && newCode !== editor.getValue()) {
-        editor.setValue(newCode)
+watch(() => props.modelValue, (newValue) => {
+    if (editor && newValue !== editor.getValue()) {
+        editor.setValue(newValue)
     }
 })
 
@@ -101,6 +137,11 @@ onBeforeUnmount(() => {
     if (editor) {
         editor.dispose()
     }
+})
+
+// 暴露格式化方法
+defineExpose({
+    formatCode
 })
 </script>
 

@@ -1,6 +1,5 @@
 <script setup>
 import { useThemeStore } from './stores/theme'
-import { onMounted } from 'vue'
 
 const themeStore = useThemeStore()
 
@@ -8,9 +7,6 @@ const toggleTheme = () => {
   themeStore.toggleTheme()
 }
 
-onMounted(() => {
-  themeStore.init()
-})
 </script>
 
 <template>

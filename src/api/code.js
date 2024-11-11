@@ -11,14 +11,12 @@ export const codeApi = {
         return api.post('/snippets', data)
     },
 
-    // 更新代码片段
-    updateSnippet(id, data) {
-        return api.put(`/snippets/${id}`, data)
-    },
-
     // 获取语言列表
     getLanguages() {
-        return api.get('/languages')
+        return api.get('/snippets/languages').then(response => {
+            // 确保返回 data 字段中的数据
+            return response.data || {}
+        })
     },
 
     // 获取共享代码
@@ -26,7 +24,7 @@ export const codeApi = {
         return api.get(`/snippets/shared/${accessCode}`)
     },
 
-    // 创建共享链接
+    // 创建分享链接
     shareCode(data) {
         return api.post('/snippets/share', data)
     }

@@ -1,6 +1,7 @@
 import { codeApi } from '../api/code'
 
 export const codeService = {
+    // 获取代码片段
     async getSnippet(id) {
         try {
             return await codeApi.getSnippet(id)
@@ -10,13 +11,9 @@ export const codeService = {
         }
     },
 
-    async createSnippet(code, language, title = '') {
+    // 创建代码片段
+    async createSnippet(data) {
         try {
-            const data = {
-                code,
-                language,
-                title
-            }
             return await codeApi.createSnippet(data)
         } catch (error) {
             console.error('创建代码片段失败:', error)
@@ -24,15 +21,17 @@ export const codeService = {
         }
     },
 
-    async updateSnippet(id, updates) {
+    // 更新代码片段
+    async updateSnippet(id, data) {
         try {
-            return await codeApi.updateSnippet(id, updates)
+            return await codeApi.updateSnippet(id, data)
         } catch (error) {
             console.error('更新代码片段失败:', error)
             throw error
         }
     },
 
+    // 获取语言列表
     async getLanguages() {
         try {
             return await codeApi.getLanguages()
@@ -42,6 +41,7 @@ export const codeService = {
         }
     },
 
+    // 获取共享代码
     async getSharedCode(accessCode) {
         try {
             return await codeApi.getSharedCode(accessCode)
@@ -51,12 +51,13 @@ export const codeService = {
         }
     },
 
+    // 创建分享链接
     async shareCode(data) {
         try {
             return await codeApi.shareCode(data)
         } catch (error) {
-            console.error('创建共享链接失败:', error)
+            console.error('创建分享链接失败:', error)
             throw error
         }
     }
-} 
+}

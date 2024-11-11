@@ -2,6 +2,10 @@
     <div class="container mx-auto p-2 sm:p-4 h-full flex flex-col">
         <!-- 工具栏 -->
         <div class="flex flex-wrap gap-2 sm:gap-4 mb-4">
+            <!-- 标题输入框 -->
+            <input v-model="title" type="text" placeholder="输入代码标题（可选）" maxlength="50"
+                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
             <!-- 语言选择 -->
             <div class="relative" ref="dropdown">
                 <button @click="isDropdownOpen = !isDropdownOpen"
@@ -12,16 +16,17 @@
                     </span>
                 </button>
                 <!-- 语言下拉菜单 -->
-                <div v-if="isDropdownOpen"
-                    class="absolute top-full left-0 mt-1 w-48 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 rounded shadow-lg border dark:border-gray-700 z-10">
-                    <!-- 动态显示语言分组 -->
-                    <div v-for="group in languageGroups" :key="group.name" class="py-1">
+                <div v-show="isDropdownOpen && storeLanguages"
+                    class="absolute top-full left-0 mt-1 w-64 max-h-96 custom-scrollbar overflow-y-auto bg-white dark:bg-gray-800 rounded shadow-lg border dark:border-gray-700 z-10">
+                    <div v-for="(languages, category) in storeLanguages" :key="category"
+                        class="py-1 border-b last:border-b-0 dark:border-gray-700">
                         <div
                             class="px-4 py-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold bg-gray-50 dark:bg-gray-900">
-                            {{ group.name }}
+                            {{ category }}
                         </div>
-                        <button v-for="lang in group.languages" :key="lang.id" @click="selectLanguage(lang)"
-                            class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <button v-for="lang in languages" :key="lang.id" @click="selectLanguage(lang)"
+                            class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            :class="{ 'bg-blue-50 dark:bg-blue-900/20': language === lang.id }">
                             {{ lang.name }}
                         </button>
                     </div>
@@ -46,6 +51,12 @@
                 <span>复制代码</span>
             </button>
 
+            <!-- 添加格式化按钮 -->
+            <button @click="formatCode"
+                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2">
+                <span>格式化代码</span>
+            </button>
+
             <!-- 返回首页按钮 -->
             <button @click="router.push('/')"
                 class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
@@ -55,20 +66,29 @@
 
         <!-- 编辑器容器 -->
         <div class="flex-1 border border-gray-700 rounded relative group">
-            <CodeEditor v-model="code" :language="language" @change="handleCodeChange" />
+            <CodeEditor ref="editorRef" v-model="code" :language="language" @change="handleCodeChange" />
         </div>
 
-        <!-- 分享设置对话框 -->
+        <!-- 分设置对话框 -->
         <TransitionFade>
             <div v-if="showShareSettings" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
                     <h3 class="text-xl font-semibold mb-4">分享设置</h3>
                     <form @submit.prevent="shareCode" class="space-y-4">
+                        <!-- 自定义提取码 -->
+                        <div>
+                            <label for="accessCode" class="block text-sm font-medium mb-2">
+                                提取码（可选，不填将自动生成）
+                            </label>
+                            <input id="accessCode" v-model="accessCode" type="text" maxlength="6" placeholder="请输入6位提取码"
+                                class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                pattern="[A-Za-z0-9]{0,6}" title="提取码应为6位字母或数字">
+                        </div>
                         <!-- 过期时间设置 -->
                         <div>
                             <label for="expireTime" class="block text-sm font-medium mb-2">过期时间</label>
                             <select id="expireTime" v-model="expireTime"
-                                class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600">
+                                class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="1h">1小时</option>
                                 <option value="1d">1天</option>
                                 <option value="7d">7天</option>
@@ -82,7 +102,8 @@
                                 class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                                 取消
                             </button>
-                            <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            <button type="submit" :disabled="!code"
+                                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
                                 生成链接
                             </button>
                         </div>
@@ -119,32 +140,38 @@ const showShareSettings = ref(false)
 const expireTime = ref('7d')
 const isLoading = ref(false)
 
+// 添加标题状态
+const title = ref('')
+
 const { languages: storeLanguages } = storeToRefs(codeStore)
 
-// 修改计算属性部分
-const languageGroups = computed(() => {
-    if (!storeLanguages.value) return []
-    return Object.entries(storeLanguages.value).map(([key, languages]) => ({
-        name: key,
-        languages: Array.isArray(languages) ? languages : []
-    }))
-})
+// 添加编辑器引用
+const editorRef = ref(null)
 
-// 修改获取当前语言名称的方法
+// 添加当前代码片段ID的状态
+const currentSnippetId = ref(null)
+
+// 添加格式化方法
+const formatCode = () => {
+    editorRef.value?.formatCode()
+}
+
+// 获取当前语言名称
 const getCurrentLanguageName = () => {
+    console.log('Current language:', language.value)
+    console.log('Store languages:', storeLanguages.value)
     if (!language.value) return '选择语言'
     if (!storeLanguages.value) return language.value
 
-    // 遍历所有分组查找当前语言
-    for (const [groupName, languages] of Object.entries(storeLanguages.value)) {
-        if (!Array.isArray(languages)) continue
+    // 直接遍历 storeLanguages.value 的所有分组
+    for (const languages of Object.values(storeLanguages.value)) {
         const found = languages.find(lang => lang.id === language.value)
         if (found) return found.name
     }
     return language.value
 }
 
-// 修改语言选择方法
+// 语言选择
 const selectLanguage = (lang) => {
     if (lang?.id) {
         language.value = lang.id
@@ -160,10 +187,26 @@ const handleCodeChange = (newCode) => {
 // 保存代码
 const saveCode = () => withLoading(async () => {
     try {
-        await codeStore.createSnippet(code.value, language.value)
+        if (!code.value?.trim()) {
+            showToast('代码内容不能为空', 'error')
+            return
+        }
+
+        // 直接传递正确的参数结构
+        const result = await codeStore.createSnippet({
+            id: currentSnippetId.value,
+            code: code.value,         // 直接传递代码字符串
+            language: language.value,  // 直接传递语言标识符
+            title: title.value        // 直接传递标题
+        })
+
+        // 保存返回的ID
+        currentSnippetId.value = result.id
         showToast('代码保存成功')
+        return result
     } catch (error) {
         showToast(error.message, 'error')
+        throw error
     }
 })
 
@@ -175,14 +218,37 @@ const openShareSettings = () => {
 // 分享代码
 const shareCode = () => withLoading(async () => {
     try {
+        if (!code.value?.trim()) {
+            showToast('代码内容不能为空', 'error')
+            return
+        }
+
+        // 如果没有保存过或代码有更新，先保存
+        const needsSave = !currentSnippetId.value ||
+            code.value !== (await codeStore.getSnippet(currentSnippetId.value))?.code
+
+        if (needsSave) {
+            await saveCode()
+        }
+
+        // 创建分享链接
         const result = await codeStore.shareCode({
-            code: code.value,
-            language: language.value,
+            snippetId: currentSnippetId.value,
+            accessCode: accessCode.value,
             expireTime: expireTime.value
         })
-        // 处理分享结果，比如显示分享链接
-        showToast('分享链接已生成')
+
+        // 显示分享结果
+        if (result?.accessCode) {
+            showToast(`分享成功，提取码：${result.accessCode}`)
+            // 复制提取码到剪贴板
+            await navigator.clipboard.writeText(result.accessCode)
+            showToast('提取码已复制到剪贴板')
+        }
+
         showShareSettings.value = false
+        // 重置提取码
+        accessCode.value = ''
     } catch (error) {
         showToast(error.message, 'error')
     }
@@ -223,11 +289,9 @@ const handleClickOutside = (event) => {
 
 onMounted(async () => {
     try {
-        console.log('Editor: 开始初始化语言列表')
         await codeStore.initLanguages()
-        console.log('Editor: 语言列表初始化完成', storeLanguages.value)
     } catch (error) {
-        console.error('Editor: 初始化语言列表失败', error)
+        console.error('初始化语言列表失败:', error)
     }
     document.addEventListener('click', handleClickOutside)
 })
@@ -240,5 +304,44 @@ onUnmounted(() => {
 <style scoped>
 .max-h-96 {
     max-height: 24rem;
+}
+
+/* 自定义滚动条样式 */
+.custom-scrollbar {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 transparent;
+}
+
+/* Chrome, Edge, Safari */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #94a3b8;
+    border-radius: 3px;
+}
+
+/* 暗色模式 */
+:deep(.dark) .custom-scrollbar {
+    scrollbar-color: #475569 transparent;
+}
+
+:deep(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #475569;
+}
+
+/* 悬停效果 */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #64748b;
+}
+
+:deep(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #334155;
 }
 </style>

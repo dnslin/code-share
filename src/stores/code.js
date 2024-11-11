@@ -22,17 +22,28 @@ export const useCodeStore = defineStore('code', {
             }
         },
 
-        async createSnippet(code, language, title) {
-            this.loading = true
+        async createSnippet({ id, code, language, title }) {
+            console.log('------------')
             try {
-                const snippet = await codeService.createSnippet(code, language, title)
-                this.currentSnippet = snippet
-                return snippet
+                const data = {
+                    code,
+                    language,
+                    ...(title ? { title } : {})
+                }
+
+                let result
+                if (id) {
+                    // 更新已有代码片段
+                    result = await codeService.updateSnippet(id, data)
+                } else {
+                    // 创建新的代码片段
+                    result = await codeService.createSnippet(data)
+                }
+
+                return result
             } catch (error) {
-                this.error = error.message
+                console.error('保存代码片段失败:', error)
                 throw error
-            } finally {
-                this.loading = false
             }
         },
 
@@ -101,15 +112,16 @@ export const useCodeStore = defineStore('code', {
             }
         },
 
-        async shareCode(data) {
-            this.loading = true
+        async shareCode({ snippetId, accessCode, expireTime }) {
             try {
-                return await codeService.shareCode(data)
+                return await codeService.shareCode({
+                    snippetId,
+                    accessCode,
+                    expireTime
+                })
             } catch (error) {
-                this.error = error.message
+                console.error('创建分享链接失败:', error)
                 throw error
-            } finally {
-                this.loading = false
             }
         }
     }
