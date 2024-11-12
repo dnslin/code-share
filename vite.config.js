@@ -2,11 +2,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
+import removeConsole from 'vite-plugin-remove-console'
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    removeConsole()
+  ],
   resolve: {
     alias: {
       '@': '/src'
