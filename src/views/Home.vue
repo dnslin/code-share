@@ -33,7 +33,7 @@
             <div class="lg:flex-1 w-full max-w-lg animate-fade-in-up opacity-0" style="animation-delay: 400ms">
                 <div class="illustration-container">
                     <img src="@/assets/predictive.svg" alt="Code Sharing Illustration"
-                        class="w-full h-auto transition-colors duration-300"
+                        class="w-full h-auto max-h-[400px] transition-colors duration-300"
                         :class="{ 'svg-light': !isDark, 'svg-dark': isDark }" />
                 </div>
             </div>
