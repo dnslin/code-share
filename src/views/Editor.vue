@@ -128,6 +128,7 @@ import CodeEditor from '../components/CodeEditor.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import TransitionFade from '../components/TransitionFade.vue'
 import { storeToRefs } from 'pinia'
+import { useToast } from 'vue-toastification'
 
 const router = useRouter()
 const codeStore = useCodeStore()
@@ -156,6 +157,8 @@ const snippetSerial = ref('')
 const editorRef = ref(null)
 
 const { languages: storeLanguages } = storeToRefs(codeStore)
+
+const toast = useToast()
 
 // 添加格式化方法
 const formatCode = () => {
@@ -187,9 +190,8 @@ const selectLanguage = (lang) => {
 const handleCodeChange = (newCode) => {
     code.value = newCode
 }
-
 // 保存代码
-const saveCode = () => withLoading(async () => {
+const saveCode = async () => {
     try {
         if (!code.value?.trim()) {
             showToast('代码内容不能为空', 'error')
@@ -229,54 +231,66 @@ const saveCode = () => withLoading(async () => {
         showToast('代码保存成功')
         return result
     } catch (error) {
-        showToast(error.message || '保存失败', 'error')
+        showToast(error.message || '保���失败', 'error')
         throw error
     }
-})
+}
 
 // 分享设置
 const openShareSettings = () => {
     showShareSettings.value = true
 }
 
+// 加载状态控制
+const withLoading = async (fn) => {
+    isLoading.value = true
+    try {
+        const result = await fn() // 获取并返回异步函数的结果
+        return result
+    } finally {
+        isLoading.value = false
+    }
+}
+
 // 分享代码
 const shareCode = () => withLoading(async () => {
-    try {
-        if (!code.value?.trim()) {
-            showToast('代码内容不能为空', 'error')
-            return
-        }
-
-        // 先执行保存操作
-        const saveResult = await saveCode()
-
-        // 如果保存失败或没有返回 id，则终止分享
-        if (!saveResult?.id) {
-            showToast('保存代码失败，无法生成分享链接', 'error')
-            return
-        }
-
-        // 创建分享链接
-        const result = await codeStore.shareCode({
-            snippetId: saveResult.id, // 使用刚保存的代码的 id
-            accessCode: accessCode.value,
-            expireTime: expireTime.value
-        })
-
-        // 显示分享结果
-        if (result?.accessCode) {
-            showToast(`分享成功，提取码：${result.accessCode}`)
-            // 复制提取码到剪贴板
-            await navigator.clipboard.writeText(result.accessCode)
-            showToast('提取码已复制到剪贴板')
-        }
-
-        showShareSettings.value = false
-        // 重置提取码
-        accessCode.value = ''
-    } catch (error) {
-        showToast(error.message || '分享失败', 'error')
+    if (!code.value?.trim()) {
+        showToast('代码内容不能为空', 'error')
+        return
     }
+
+    // 先执行保存操作
+    const saveResult = await saveCode()
+
+    if (!saveResult?.data) {
+        showToast('保存代码失败，无法生成分享链接', 'error')
+        return
+    }
+
+    // 创建分享链接  返回错误则弹出错误信息
+    const result = await codeStore.shareCode({
+        snippetId: saveResult.data,
+        accessCode: accessCode.value,
+        expireTime: expireTime.value
+    })
+
+    // 如果返回成功，则弹出成功信息，并复制提取码到剪贴板
+
+    if (result?.data) {
+        const baseUrl = window.location.origin; // 获取当前网站的域名
+        const shareLink = `${baseUrl}${result.data.shareLink}`;
+        let clipboardText = `分享链接：${shareLink}`;
+
+        if (result.data.accessCode) {
+            clipboardText += `\n提取码：${result.data.accessCode}`;
+        }
+
+        await navigator.clipboard.writeText(clipboardText);
+        showToast('分享链接' + (result.data.accessCode ? '和提取码' : '') + '已复制到剪贴板');
+    }
+
+    showShareSettings.value = false
+    accessCode.value = ''
 })
 
 // 复制代码
@@ -289,20 +303,9 @@ const copyCode = async () => {
     }
 }
 
-// 加载状态控制
-const withLoading = async (fn) => {
-    isLoading.value = true
-    try {
-        await fn()
-    } finally {
-        isLoading.value = false
-    }
-}
-
 // 消息提示
 const showToast = (msg, type = 'success') => {
-    console.log(`${type.toUpperCase()}: ${msg}`)
-    // 这里可以添加实际的 toast 实现
+    toast[type](msg)
 }
 
 // 点击外部关闭下拉菜单
