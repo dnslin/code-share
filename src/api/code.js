@@ -1,27 +1,34 @@
 import api from './config'
 
 export const codeApi = {
+    // 获取语言列表
+    getLanguages() {
+        return api.get('/languages')
+    },
+
+    // 创建代码片段
+    createSnippet(data) {
+        return api.post('/snippets', data)
+    },
+
+    // 更新代码片段
+    updateSnippet(id, data) {
+        return api.put(`/snippets/${id}`, data)
+    },
+
     // 获取代码片段
     getSnippet(id) {
         return api.get(`/snippets/${id}`)
     },
 
-    // 创建新的代码片段
-    createSnippet(data) {
-        return api.post('/snippets', data)
+    // 获取分享信息
+    getShareInfo(shareId) {
+        return api.get(`/snippets/share/${shareId}/info`)
     },
 
-    // 获取语言列表
-    getLanguages() {
-        return api.get('/snippets/languages').then(response => {
-            // 确保返回 data 字段中的数据
-            return response.data || {}
-        })
-    },
-
-    // 获取共享代码
-    getSharedCode(accessCode) {
-        return api.get(`/snippets/shared/${accessCode}`)
+    // 获取分享内容
+    getShareContent(shareId, accessCode) {
+        return api.post(`/snippets/share/${shareId}/content`, { accessCode })
     },
 
     // 创建分享链接

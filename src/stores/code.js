@@ -3,129 +3,105 @@ import { codeService } from '../services/codeService'
 
 export const useCodeStore = defineStore('code', {
     state: () => ({
+        languages: null,
+        languagesLastFetch: null,
         currentSnippet: null,
-        languages: [],
         loading: false,
-        error: null,
-        languagesLastFetch: null
+        error: null
     }),
 
     actions: {
-        async fetchSnippet(id) {
-            this.loading = true
+        async initLanguages() {
             try {
-                this.currentSnippet = await codeService.getSnippet(id)
-            } catch (error) {
-                this.error = error.message
-            } finally {
-                this.loading = false
-            }
-        },
-
-        async createSnippet({ id, code, language, title, serial }) {
-            try {
-                const data = {
-                    code,
-                    language,
-                    serial,
-                    ...(title ? { title } : {})
-                }
-
-                let result
-                if (id) {
-                    // 更新已有代码片段
-                    result = await codeService.updateSnippet(id, data)
-                } else {
-                    // 创建新的代码片段
-                    result = await codeService.createSnippet(data)
-                }
-
-                // 确保返回正确的结构
-                return {
-                    id: id || result.id,
-                    data: result.data
-                }
-            } catch (error) {
-                console.error('保存代码片段失败:', error)
-                throw error
-            }
-        },
-
-        async fetchLanguages() {
-            console.log('Store: 开始获取语言列表')
-            const now = Date.now()
-            if (
-                this.languages &&
-                Object.keys(this.languages).length > 0 &&
-                this.languagesLastFetch &&
-                (now - this.languagesLastFetch < 3600000)
-            ) {
-                console.log('Store: 使用缓存的语言列表')
-                return this.languages
-            }
-
-            try {
-                console.log('Store: 请求后端语言列表')
-                const response = await codeService.getLanguages()
-                console.log('Store: 获取到语言列表', response)
-
-                this.languages = response
-                this.languagesLastFetch = now
-
-                localStorage.setItem('codeLanguages', JSON.stringify({
-                    languages: response,
-                    timestamp: now
-                }))
-
-                return response
-            } catch (error) {
-                console.error('Store: 获取语言列表失败', error)
-                const cached = localStorage.getItem('codeLanguages')
-                if (cached) {
-                    const { languages } = JSON.parse(cached)
-                    this.languages = languages
-                    return languages
-                }
-                throw error
-            }
-        },
-
-        initLanguages() {
-            const cached = localStorage.getItem('codeLanguages')
-            if (cached) {
-                const { languages, timestamp } = JSON.parse(cached)
                 const now = Date.now()
-                if (now - timestamp < 3600000) {
-                    this.languages = languages
-                    this.languagesLastFetch = timestamp
-                    return
+                if (
+                    this.languages &&
+                    this.languagesLastFetch &&
+                    (now - this.languagesLastFetch < 3600000)
+                ) {
+                    return this.languages
                 }
-            }
-            this.fetchLanguages()
-        },
 
-        async getSharedCode(accessCode) {
-            this.loading = true
-            try {
-                return await codeService.getSharedCode(accessCode)
+                this.loading = true
+                const languages = await codeService.getLanguages()
+                this.languages = languages.data
+                this.languagesLastFetch = now
+                return languages
             } catch (error) {
                 this.error = error.message
+                console.error('初始化语言列表失败:', error)
+                return null
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async createSnippet(data) {
+            try {
+                this.loading = true
+                const result = await codeService.createSnippet(data)
+                this.currentSnippet = result
+                return result
+            } catch (error) {
+                this.error = error.message
+                console.error('创建代码片段失败:', error)
                 throw error
             } finally {
                 this.loading = false
             }
         },
 
-        async shareCode({ snippetId, accessCode, expireTime }) {
+        async updateSnippet(id, data) {
             try {
-                return await codeService.shareCode({
-                    snippetId,
-                    accessCode,
-                    expireTime
-                })
+                this.loading = true
+                const result = await codeService.updateSnippet(id, data)
+                this.currentSnippet = result
+                return result
             } catch (error) {
+                this.error = error.message
+                console.error('更新代码片段失败:', error)
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async getShareInfo(shareId) {
+            try {
+                this.loading = true
+                return await codeService.getShareInfo(shareId)
+            } catch (error) {
+                this.error = error.message
+                console.error('获取分享信息失败:', error)
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async getShareContent(shareId, accessCode) {
+            try {
+                this.loading = true
+                return await codeService.getShareContent(shareId, accessCode)
+            } catch (error) {
+                this.error = error.message
+                console.error('获取分享内容失败:', error)
+                throw error
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async shareCode(data) {
+            try {
+                this.loading = true
+                return await codeService.shareCode(data)
+            } catch (error) {
+                this.error = error.message
                 console.error('创建分享链接失败:', error)
                 throw error
+            } finally {
+                this.loading = false
             }
         }
     }

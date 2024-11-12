@@ -3,17 +3,20 @@
         <!-- 工具栏 -->
         <div class="flex flex-wrap gap-2 sm:gap-4 mb-4">
             <!-- 标题输入框 -->
-            <input v-model="title" type="text" placeholder="输入代码标题（可选）" maxlength="50"
-                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="relative flex items-center">
+                <DocumentTextIcon class="w-5 h-5 absolute left-3 text-gray-400 pointer-events-none" />
+                <input v-model="title" type="text" placeholder="输入代码标题（可选）" maxlength="50"
+                    class="w-64 h-10 pl-10 pr-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-colors duration-200">
+            </div>
 
             <!-- 语言选择 -->
             <div class="relative" ref="dropdown">
                 <button @click="isDropdownOpen = !isDropdownOpen"
-                    class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    class="btn-base bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300">
+                    <CodeBracketIcon class="w-5 h-5" />
                     <span>{{ getCurrentLanguageName() }}</span>
-                    <span class="transform transition-transform" :class="{ 'rotate-180': isDropdownOpen }">
-                        ▼
-                    </span>
+                    <ChevronDownIcon class="w-4 h-4 transform transition-transform"
+                        :class="{ 'rotate-180': isDropdownOpen }" />
                 </button>
                 <!-- 语言下拉菜单 -->
                 <div v-show="isDropdownOpen && storeLanguages"
@@ -25,42 +28,39 @@
                             {{ category }}
                         </div>
                         <button v-for="lang in languages" :key="lang.id" @click="selectLanguage(lang)"
-                            class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            :class="{ 'bg-blue-50 dark:bg-blue-900/20': language === lang.id }">
+                            class="dropdown-item" :class="{ 'active': language === lang.id }">
                             {{ lang.name }}
                         </button>
                     </div>
                 </div>
             </div>
 
+            <!-- 格式化按钮 -->
+            <button @click="formatCode"
+                class="btn-base bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/30 dark:hover:bg-violet-800/50 text-violet-700 dark:text-violet-300">
+                <WrenchIcon class="w-5 h-5" />
+                <span>格式化代码</span>
+            </button>
+
             <!-- 保存按钮 -->
             <button @click="saveCode"
-                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2">
+                class="btn-base bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300">
+                <DocumentArrowDownIcon class="w-5 h-5" />
                 <span>保存代码</span>
             </button>
 
-            <!-- 分享设置按钮 -->
+            <!-- 分享按钮 -->
             <button @click="openShareSettings"
-                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2">
-                <span>分享设置</span>
-            </button>
-
-            <!-- 复制按钮 -->
-            <button @click="copyCode"
-                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2">
-                <span>复制代码</span>
-            </button>
-
-            <!-- 添加格式化按钮 -->
-            <button @click="formatCode"
-                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2">
-                <span>格式化代码</span>
+                class="btn-base bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-800/50 text-emerald-700 dark:text-emerald-300">
+                <ShareIcon class="w-5 h-5" />
+                <span>分享代码</span>
             </button>
 
             <!-- 返回首页按钮 -->
             <button @click="router.push('/')"
-                class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                返回首页
+                class="btn-base bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                <HomeIcon class="w-5 h-5" />
+                <span>返回首页</span>
             </button>
         </div>
 
@@ -129,6 +129,15 @@ import LoadingSpinner from '../components/LoadingSpinner.vue'
 import TransitionFade from '../components/TransitionFade.vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
+import {
+    CodeBracketIcon,
+    DocumentTextIcon,
+    ChevronDownIcon,
+    WrenchIcon,
+    DocumentArrowDownIcon,
+    ShareIcon,
+    HomeIcon
+} from '@heroicons/vue/24/outline'
 
 const router = useRouter()
 const codeStore = useCodeStore()
@@ -167,13 +176,15 @@ const formatCode = () => {
 
 // 获取当前语言名称
 const getCurrentLanguageName = () => {
-    if (!language.value) return '选择语言'
-    if (!storeLanguages.value) return language.value
+    if (!language.value) return '未知语言'
+    if (!codeStore.languages?.data) return language.value
 
-    // 直接遍历 storeLanguages.value 的所有分组
-    for (const languages of Object.values(storeLanguages.value)) {
-        const found = languages.find(lang => lang.id === language.value)
-        if (found) return found.name
+    // 遍历所有分组查找当前语言
+    for (const languages of Object.values(codeStore.languages.data)) {
+        if (Array.isArray(languages)) { // 确保 languages 是数组
+            const found = languages.find(lang => lang.id === language.value)
+            if (found) return found.name
+        }
     }
     return language.value
 }
@@ -212,7 +223,7 @@ const saveCode = async () => {
             }
         }
 
-        // 保存代码，传递序列号
+        // 保存码，传递序列号
         const result = await codeStore.createSnippet({
             id: currentSnippetId.value,
             code: code.value,
@@ -231,7 +242,7 @@ const saveCode = async () => {
         showToast('代码保存成功')
         return result
     } catch (error) {
-        showToast(error.message || '保���失败', 'error')
+        showToast(error.message || '保存代码失败', 'error')
         throw error
     }
 }
@@ -329,7 +340,7 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .max-h-96 {
     max-height: 24rem;
 }
@@ -371,5 +382,34 @@ onUnmounted(() => {
 
 :deep(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: #334155;
+}
+
+.btn-base {
+    @apply px-4 py-2 rounded flex items-center gap-2 transition-colors duration-200 font-medium;
+}
+
+/* 下拉菜单按钮样 */
+.dropdown-item {
+    @apply block w-full px-4 py-2 text-left transition-colors duration-200;
+    @apply hover:bg-gray-100 dark:hover:bg-gray-700;
+    @apply text-gray-700 dark:text-gray-200;
+}
+
+.dropdown-item.active {
+    @apply bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300;
+}
+
+/* 添加输入框特定样式 */
+input.btn-base {
+    @apply block w-full;
+    /* 确保输入框占满容器宽度 */
+    @apply placeholder-gray-400 dark:placeholder-gray-500;
+    /* 调整占位符颜色 */
+}
+
+/* 确保图标不会与文本重叠 */
+input.btn-base:not(:placeholder-shown) {
+    @apply text-gray-900 dark:text-gray-100;
+    /* 输入文本的颜色 */
 }
 </style>

@@ -1,18 +1,76 @@
 <template>
     <div class="container mx-auto p-2 sm:p-4 h-full flex flex-col">
+        <!-- 提取码输入界面 -->
+        <div v-if="needAccessCode && !hasCode" class="flex-1 flex items-center justify-center">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full shadow-xl">
+                <h3 class="text-xl font-semibold mb-6 text-center">获取代码片段</h3>
+                <form @submit.prevent="fetchContent" class="space-y-4">
+                    <div>
+                        <label for="accessCode" class="block text-sm font-medium mb-2">提取码</label>
+                        <input id="accessCode" v-model="accessCode" type="text" placeholder="请输入提取码"
+                            class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600" required>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-4">
+                        <button type="button" @click="router.push('/')"
+                            class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            返回首页
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            获取代码
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 代码展示界面 -->
+        <template v-else>
+            <div class="flex flex-wrap gap-2 sm:gap-4 mb-4">
+                <!-- 语言显示 -->
+                <div class="btn-base bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                    <CodeBracketIcon class="w-5 h-5" />
+                    <span>{{ getCurrentLanguageName() }}</span>
+                </div>
+
+                <!-- 复制按钮 -->
+                <button @click="copyCode"
+                    class="btn-base bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-800/50 text-emerald-700 dark:text-emerald-300">
+                    <ClipboardDocumentIcon class="w-5 h-5" />
+                    <span>复制代码</span>
+                </button>
+
+                <!-- 返回首页按钮 -->
+                <button @click="router.push('/')"
+                    class="btn-base bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    <HomeIcon class="w-5 h-5" />
+                    <span>返回首页</span>
+                </button>
+            </div>
+
+            <!-- 代码编辑器 -->
+            <div class="flex-1 border border-gray-700 rounded relative">
+                <CodeEditor v-model="code" :language="language" :readonly="true" />
+            </div>
+        </template>
+
+        <!-- 加载状态 -->
+        <div v-if="isLoading"
+            class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <LoadingSpinner />
+        </div>
+
         <TransitionFade>
-            <!-- 提取码输入界面 -->
-            <div v-if="!hasCode" class="flex-1 flex items-center justify-center">
-                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full shadow-xl card-hover">
-                    <h3 class="text-xl font-semibold mb-6 text-center">获取代码片段</h3>
-                    <form @submit.prevent="fetchCode" class="space-y-4">
-                        <!-- 提取码输入 -->
+            <div v-if="showAccessCodeDialog"
+                class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+                    <h3 class="text-xl font-semibold mb-4">输入提取码</h3>
+                    <form @submit.prevent="fetchContent" class="space-y-4">
                         <div>
                             <label for="accessCode" class="block text-sm font-medium mb-2">提取码</label>
-                            <input id="accessCode" type="text" v-model="accessCode" placeholder="请输入提取码"
-                                class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600">
+                            <input id="accessCode" v-model="accessCode" type="text" placeholder="请输入提取码"
+                                class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
                         </div>
-                        <!-- 按钮 -->
                         <div class="flex justify-end gap-2 pt-4">
                             <button type="button" @click="router.push('/')"
                                 class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
@@ -26,117 +84,86 @@
                 </div>
             </div>
         </TransitionFade>
-
-        <TransitionFade>
-            <!-- 代码展示界面 -->
-            <template v-if="hasCode">
-                <div class="flex flex-wrap gap-2 sm:gap-4 mb-4">
-                    <!-- 语言选择 -->
-                    <div class="relative" ref="dropdown">
-                        <button @click="isDropdownOpen = !isDropdownOpen"
-                            class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700">
-                            <span>{{ getLanguageDisplay(language) }}</span>
-                            <span class="transform transition-transform" :class="{ 'rotate-180': isDropdownOpen }">
-                                ▼
-                            </span>
-                        </button>
-                        <!-- 语言下拉菜单 -->
-                        <div v-if="isDropdownOpen"
-                            class="absolute top-full left-0 mt-1 w-48 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 rounded shadow-lg border dark:border-gray-700 z-10">
-                            <!-- 动态显示语言分组 -->
-                            <div v-for="group in languageGroups" :key="group.name" class="py-1">
-                                <div
-                                    class="px-4 py-1 text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold bg-gray-50 dark:bg-gray-900">
-                                    {{ group.name }}
-                                </div>
-                                <button v-for="lang in group.languages" :key="lang.id" @click="selectLanguage(lang)"
-                                    class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    {{ lang.name }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 复制按钮 -->
-                    <button @click="copyCode"
-                        class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2">
-                        <span>复制代码</span>
-                    </button>
-
-                    <!-- 返回首页按钮 -->
-                    <button @click="router.push('/')"
-                        class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                        返回首页
-                    </button>
-                </div>
-                <div class="flex-1 border border-gray-700 rounded relative group">
-                    <CodeEditor v-model="code" :language="language" :readonly="true" />
-                </div>
-            </template>
-        </TransitionFade>
-
-        <!-- 加载状态 -->
-        <div v-if="isLoading"
-            class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <LoadingSpinner />
-        </div>
     </div>
 </template>
 
+<style scoped>
+.btn-base {
+    @apply px-4 py-2 rounded flex items-center gap-2 transition-colors duration-200 font-medium;
+}
+</style>
+
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCodeStore } from '../stores/code'
 import CodeEditor from '../components/CodeEditor.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import TransitionFade from '../components/TransitionFade.vue'
-import { storeToRefs } from 'pinia'
+import {
+    CodeBracketIcon,
+    ClipboardDocumentIcon,
+    HomeIcon
+} from '@heroicons/vue/24/outline'
 
 const route = useRoute()
 const router = useRouter()
 const codeStore = useCodeStore()
-const dropdown = ref(null)
 
 const code = ref('')
-const language = ref('javascript')
-const isDropdownOpen = ref(false)
+const language = ref('')
 const accessCode = ref('')
-const hasCode = ref(false)
-const showMessage = ref(false)
-const message = ref('')
-const messageType = ref('success')
 const isLoading = ref(false)
+const needAccessCode = ref(false)
+const hasCode = ref(false)
+const showAccessCodeDialog = ref(false)
 
-const { languages: storeLanguages } = storeToRefs(codeStore)
+// 获取代码信息
+const fetchInfo = async () => {
+    try {
+        isLoading.value = true
+        const shareId = route.params.id
+        const result = await codeStore.getShareInfo(shareId)
 
-const languageGroups = computed(() => {
-    if (!storeLanguages.value) return []
-    return Object.entries(storeLanguages.value).map(([key, languages]) => ({
-        name: key,
-        languages: Array.isArray(languages) ? languages : []
-    }))
-})
+        if (result?.data) {
+            needAccessCode.value = result.data.needAccessCode
+            language.value = result.data.language
 
-const getLanguageDisplay = (langId) => {
-    if (!langId) return ''
-    if (!storeLanguages.value) return langId
-
-    // 遍历所有分组查找当前语言
-    for (const [groupName, languages] of Object.entries(storeLanguages.value)) {
-        if (!Array.isArray(languages)) continue
-        const found = languages.find(lang => lang.id === langId)
-        if (found) return found.name
+            // 如果需要提取码，显示对话框
+            if (needAccessCode.value) {
+                showAccessCodeDialog.value = true
+            } else {
+                // 如果不需要提取码，直接获取内容
+                await fetchContent()
+            }
+        }
+    } catch (error) {
+        showToast(error.message, 'error')
+    } finally {
+        isLoading.value = false
     }
-    return langId
 }
 
-const selectLanguage = (lang) => {
-    if (lang && lang.id) {
-        language.value = lang.id
-        isDropdownOpen.value = false
+// 获取代码内容
+const fetchContent = async () => {
+    try {
+        isLoading.value = true
+        const shareId = route.params.id
+        const result = await codeStore.getShareContent(shareId, accessCode.value)
+
+        if (result?.data) {
+            code.value = result.data.code
+            language.value = result.data.language
+            hasCode.value = true
+        }
+    } catch (error) {
+        showToast(error.message, 'error')
+    } finally {
+        isLoading.value = false
     }
 }
 
+// 复制代码
 const copyCode = async () => {
     try {
         await navigator.clipboard.writeText(code.value)
@@ -146,59 +173,25 @@ const copyCode = async () => {
     }
 }
 
-onMounted(async () => {
-    // 初始化语言列表
-    await codeStore.initLanguages()
+// 获取当前语言名称
+const getCurrentLanguageName = () => {
+    if (!language.value) return '未知语言'
+    if (!codeStore.languages?.data) return language.value
 
-    if (route.params.id) {
-        await codeStore.fetchSnippet(route.params.id)
+    // 在所有分组中查找当前语言
+    for (const languages of Object.values(codeStore.languages.data)) {
+        const found = languages.find(lang => lang.id === language.value)
+        if (found) return found.name
     }
-})
-
-const fetchCode = () => withLoading(async () => {
-    if (!accessCode.value) {
-        showToast('请输入提取码', 'error')
-        return
-    }
-
-    try {
-        const sharedCode = await codeStore.getSharedCode(accessCode.value)
-        loadCode(sharedCode)
-        hasCode.value = true
-        showToast('获取代码成功', 'success')
-    } catch (error) {
-        showToast(error.message, 'error')
-    }
-})
-
-const loadCode = (sharedCode) => {
-    code.value = sharedCode.code
-    language.value = sharedCode.language
+    return language.value
 }
 
+// 显示提示消息
 const showToast = (msg, type = 'success') => {
-    message.value = msg
-    messageType.value = type
-    showMessage.value = true
-    setTimeout(() => {
-        showMessage.value = false
-    }, 3000)
+    toast[type](msg)
 }
 
-// 添加加载状态控制
-const withLoading = async (fn) => {
-    isLoading.value = true
-    try {
-        await fn()
-    } finally {
-        isLoading.value = false
-    }
-}
-
+onMounted(() => {
+    fetchInfo()
+})
 </script>
-
-<style scoped lang="scss">
-.card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:border-blue-500/50;
-}
-</style>
