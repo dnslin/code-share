@@ -87,7 +87,7 @@
     </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .btn-base {
     @apply px-4 py-2 rounded flex items-center gap-2 transition-colors duration-200 font-medium;
 }
