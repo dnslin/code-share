@@ -38,7 +38,11 @@
                     <ClipboardDocumentIcon class="w-5 h-5" />
                     <span>复制代码</span>
                 </button>
-
+                <button @click="copyRawLink"
+                    class="btn-base bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300">
+                    <LinkIcon class="w-5 h-5" />
+                    <span>原始链接</span>
+                </button>
                 <!-- 返回首页按钮 -->
                 <button @click="router.push('/')"
                     class="btn-base bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
@@ -95,6 +99,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useToast } from 'vue-toastification'
 import { useRoute, useRouter } from 'vue-router'
 import { useCodeStore } from '../stores/code'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -103,6 +108,7 @@ import TransitionFade from '../components/TransitionFade.vue'
 import {
     CodeBracketIcon,
     ClipboardDocumentIcon,
+    LinkIcon,
     HomeIcon
 } from '@heroicons/vue/24/outline'
 
@@ -117,7 +123,7 @@ const isLoading = ref(false)
 const needAccessCode = ref(false)
 const hasCode = ref(false)
 const showAccessCodeDialog = ref(false)
-
+const toast = useToast()
 // 获取代码信息
 const fetchInfo = async () => {
     try {
@@ -138,12 +144,29 @@ const fetchInfo = async () => {
             }
         }
     } catch (error) {
-        showToast(error.message, 'error')
+        showToast(error.detail, 'error')
     } finally {
         isLoading.value = false
     }
 }
 
+const copyRawLink = async () => {
+    try {
+        const baseUrl = window.location.origin
+        const shareId = route.params.id
+        let rawUrl = `${baseUrl}/api/snippets/share/${shareId}/raw`
+
+        // 如果需要提取码且已经输入，则添加到URL
+        if (needAccessCode.value && accessCode.value) {
+            rawUrl += `?access_code=${accessCode.value}`
+        }
+
+        await navigator.clipboard.writeText(rawUrl)
+        showToast('原始代码链接已复制到剪贴板')
+    } catch (err) {
+        showToast('复制失败，请手动复制', 'error')
+    }
+}
 // 获取代码内容
 const fetchContent = async () => {
     try {
@@ -155,6 +178,8 @@ const fetchContent = async () => {
             code.value = result.data.code
             language.value = result.data.language
             hasCode.value = true
+            // 添加这一行：获取代码成功后关闭弹窗
+            showAccessCodeDialog.value = false
         }
     } catch (error) {
         showToast(error.message, 'error')
