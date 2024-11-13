@@ -18,7 +18,7 @@ export const codeApi = {
 
     // 获取代码片段
     getSnippet(id) {
-        return api.get(`/snippets/${id}`)
+        return api.get(`/snippets/${id}/edit`)
     },
 
     // 获取分享信息

@@ -55,7 +55,11 @@
                 <ShareIcon class="w-5 h-5" />
                 <span>分享代码</span>
             </button>
-
+            <button @click="copyEditLink"
+                class="btn-base bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/50 text-purple-700 dark:text-purple-300">
+                <LinkIcon class="w-5 h-5" />
+                <span>编辑链接</span>
+            </button>
             <!-- 返回首页按钮 -->
             <button @click="router.push('/')"
                 class="btn-base bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
@@ -121,8 +125,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useCodeStore } from '../stores/code'
 import CodeEditor from '../components/CodeEditor.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
@@ -136,10 +140,12 @@ import {
     WrenchIcon,
     DocumentArrowDownIcon,
     ShareIcon,
-    HomeIcon
+    HomeIcon,
+    LinkIcon
 } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
+const route = useRoute()
 const codeStore = useCodeStore()
 const dropdown = ref(null)
 
@@ -171,9 +177,9 @@ const toast = useToast()
 
 // 添加格式化方法
 const formatCode = () => {
-    editorRef.value?.formatCode()
+    if (!code.value?.trim()) return showToast('代码内容不能为空', 'error')
+    editorRef.value?.formatCode() && showToast('代码已格式化')
 }
-
 // 获取当前语言名称
 const getCurrentLanguageName = () => {
     if (!language.value) return '未知语言'
@@ -225,13 +231,11 @@ const saveCode = async () => {
 
         // 保存码，传递序列号
         const result = await codeStore.createSnippet({
-            id: currentSnippetId.value,
             code: code.value,
             language: language.value,
             title: title.value,
             serial: snippetSerial.value
         })
-
         // 更新保存状态
         currentSnippetId.value = result.id
         snippetSerial.value = result.data
@@ -325,8 +329,54 @@ const handleClickOutside = (event) => {
         isDropdownOpen.value = false
     }
 }
+// 添加复制编辑链接方法
+const copyEditLink = async () => {
+    try {
+        if (!snippetSerial.value) {
+            showToast('请先保存代码', 'error')
+            return
+        }
 
+        const baseUrl = window.location.origin
+        const editLink = `${baseUrl}/editor/${snippetSerial.value}`  // 使用路径参数而不是查询参数
+
+        await navigator.clipboard.writeText(editLink)
+        showToast('永久编辑链接已复制到剪贴板')
+    } catch (error) {
+        showToast(error.message || '复制编辑链接失败', 'error')
+    }
+}
 onMounted(async () => {
+    console.log('Current route:', route.fullPath)  // 打印完整路由
+    console.log('Query params:', route.query)
+    const snippetId = route.params.id
+    console.log(snippetId);
+    if (snippetId) {
+        try {
+            isLoading.value = true
+            // 获取代码内容
+            const result = await codeStore.getSnippet(snippetId)
+
+            if (result?.data) {
+                // 设置编辑器内容
+                code.value = result.data.code
+                language.value = result.data.language
+                title.value = result.data.title
+
+                // 设置当前状态
+                snippetSerial.value = snippetId
+
+                // 更新保存状态
+                lastSavedCode.value = code.value
+                lastSavedLanguage.value = language.value
+                lastSavedTitle.value = title.value
+            }
+        } catch (error) {
+            showToast('加载代码失败', 'error')
+        } finally {
+            isLoading.value = false
+        }
+    }
     try {
         await codeStore.initLanguages()
     } catch (error) {

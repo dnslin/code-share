@@ -103,6 +103,18 @@ export const useCodeStore = defineStore('code', {
             } finally {
                 this.loading = false
             }
+        },
+        async getSnippet(id) {
+            try {
+                this.loading = true
+                return await codeService.getSnippet(id)
+            } catch (error) {
+                this.error = error.message
+                console.error('获取代码失败:', error)
+                throw error
+            } finally {
+                this.loading = false
+            }
         }
     }
 }) 
